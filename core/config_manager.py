@@ -58,7 +58,6 @@ def _write_config(data: dict) -> None:
 
 
 def get_clients_path() -> str:
-    """Return the configured clients base path, or the default."""
     path = _read_config().get("ruta_clientes", "")
     return path if path else _DEFAULT_CLIENTS_PATH
 
@@ -66,4 +65,16 @@ def get_clients_path() -> str:
 def save_clients_path(path: str) -> None:
     cfg = _read_config()
     cfg["ruta_clientes"] = path
+    _write_config(cfg)
+
+
+# ── Logo ─────────────────────────────────────────────────────────────────────
+
+def get_logo_path() -> str:
+    return _read_config().get("logo_path", "")
+
+
+def save_logo_path(path: str) -> None:
+    cfg = _read_config()
+    cfg["logo_path"] = path
     _write_config(cfg)

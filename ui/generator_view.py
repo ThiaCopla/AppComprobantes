@@ -4,7 +4,7 @@ import threading
 
 import flet as ft
 
-from core.config_manager import get_counter, get_secret, save_counter
+from core.config_manager import get_counter, get_logo_path, get_secret, save_counter
 from core.crypto import compute_hmac
 from core.file_manager import find_existing_pdf, get_pdf_path
 from core.pdf_generator import build_pdf
@@ -147,7 +147,8 @@ class GeneratorView:
             content = build_qr_content(nombre, precio, str(numero), hmac_hash)
             qr_img = make_qr_image(content)
             pdf_path = get_pdf_path(nombre, numero)
-            build_pdf(pdf_path, nombre, precio, numero, hmac_hash, qr_img)
+            logo = get_logo_path() or None
+            build_pdf(pdf_path, nombre, precio, numero, hmac_hash, qr_img, logo_path=logo)
 
             # Increment counter: next = numero + 1
             save_counter(numero + 1)

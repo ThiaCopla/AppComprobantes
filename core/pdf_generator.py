@@ -1,5 +1,7 @@
 from datetime import datetime
 from io import BytesIO
+from pathlib import Path
+from typing import Optional
 
 from PIL import Image
 from reportlab.lib import colors
@@ -79,6 +81,7 @@ def build_pdf(
     numero: int,
     hmac_hash: str,
     qr_pil: Image.Image,
+    logo_path: Optional[str] = None,
 ) -> None:
     fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
     s = _styles()
@@ -97,6 +100,22 @@ def build_pdf(
     story = []
 
     # ── Header ───────────────────────────────────────────────────────────────
+    if logo_path and Path(logo_path).exists():
+        try:
+            logo_img = Image.open(logo_path)
+            max_w, max_h = 50 * mm, 28 * mm
+            ratio = min(max_w / logo_img.width, max_h / logo_img.height)
+            logo_buf = BytesIO()
+            logo_img.save(logo_buf, format="PNG")
+            logo_buf.seek(0)
+            logo_rl = RLImage(logo_buf, width=logo_img.width * ratio, height=logo_img.height * ratio)
+            logo_tbl = Table([[logo_rl]], colWidths=[W])
+            logo_tbl.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
+            story.append(logo_tbl)
+            story.append(Spacer(1, 4 * mm))
+        except Exception:
+            pass
+
     story.append(Paragraph("COMPROBANTE", s["title"]))
     story.append(Paragraph(f"N° {numero:04d}  ·  {fecha}", s["subtitle"]))
     story.append(Spacer(1, 3 * mm))

@@ -1,5 +1,6 @@
 import flet as ft
 from flet.core.control import Control as _FletControl
+from pathlib import Path
 
 # ── Flet 0.28 / Python 3.9 compatibility patch ──────────────────────────────
 # Tab.before_update() calls isinstance(icon, IconValue) where IconValue is
@@ -22,8 +23,12 @@ from ui.validator_view import ValidatorView
 from ui.config_view import ConfigView
 
 
+ICON_PATH = str(Path(__file__).parent / "assets" / "icon.jpg")
+
+
 def main(page: ft.Page):
     page.title = "AppComprobantes"
+    page.window.icon = ICON_PATH
     page.theme_mode = ft.ThemeMode.LIGHT
     page.window.width = 520
     page.window.height = 780
@@ -57,4 +62,4 @@ def main(page: ft.Page):
     page.add(tabs)
 
 
-ft.app(target=main)
+ft.app(target=main, assets_dir="assets")

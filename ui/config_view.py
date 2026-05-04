@@ -1,13 +1,18 @@
+import base64
 import subprocess
 import threading
+from io import BytesIO
 from pathlib import Path
 
 import flet as ft
+from PIL import Image as PILImage
 
 from core.config_manager import (
     get_clients_path,
+    get_logo_path,
     get_secret,
     save_clients_path,
+    save_logo_path,
     save_secret,
 )
 
@@ -88,6 +93,44 @@ class ConfigView:
 
         self._path_feedback = ft.Text("", size=12, visible=False)
 
+        # ── Logo ─────────────────────────────────────────────────────────────
+        logo_path = get_logo_path()
+        valid_logo = bool(logo_path) and Path(logo_path).exists()
+
+        self._logo_img = ft.Image(
+            src_base64=self._encode_preview(logo_path) if valid_logo else "",
+            width=80, height=80,
+            fit=ft.ImageFit.CONTAIN,
+            visible=valid_logo,
+        )
+        self._logo_placeholder_icon = ft.Icon(
+            "image", color=ft.Colors.BLUE_GREY_200, size=56,
+            visible=not valid_logo,
+        )
+        self._logo_name = ft.Text(
+            Path(logo_path).name if valid_logo else "",
+            size=11, color=ft.Colors.BLUE_GREY_700,
+            visible=valid_logo,
+        )
+        self._pick_logo_btn = ft.ElevatedButton(
+            "Elegir imagen",
+            icon="image_search",
+            style=ft.ButtonStyle(
+                color={ft.ControlState.DEFAULT: ft.Colors.WHITE},
+                bgcolor={ft.ControlState.DEFAULT: ft.Colors.BLUE_700},
+                shape=ft.RoundedRectangleBorder(radius=8),
+                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+            ),
+            on_click=self._pick_logo,
+        )
+        self._remove_logo_btn = ft.TextButton(
+            "Quitar logo",
+            icon="delete",
+            on_click=self._remove_logo,
+            visible=valid_logo,
+        )
+        self._logo_feedback = ft.Text("", size=12, visible=False)
+
     # ── Key handlers ──────────────────────────────────────────────────────────
 
     def _clear_key_feedback(self, e=None):
@@ -119,6 +162,61 @@ class ConfigView:
 
         self._key_feedback.visible = True
         self.page.update()
+
+    # ── Logo handlers ─────────────────────────────────────────────────────────
+
+    def _encode_preview(self, path: str) -> str:
+        img = PILImage.open(path)
+        img.thumbnail((160, 160))
+        buf = BytesIO()
+        img.save(buf, format="PNG")
+        return base64.b64encode(buf.getvalue()).decode()
+
+    def _pick_logo(self, e):
+        threading.Thread(target=self._run_logo_picker, daemon=True).start()
+
+    def _run_logo_picker(self):
+        self._pick_logo_btn.disabled = True
+        self._logo_feedback.visible = False
+        self.page.update()
+        try:
+            proc = subprocess.run(
+                ["osascript", "-e",
+                 'POSIX path of (choose file with prompt "Seleccionar imagen para el logo del comprobante")'],
+                capture_output=True, text=True,
+            )
+            if proc.returncode == 0 and proc.stdout.strip():
+                path = proc.stdout.strip().rstrip("\n")
+                preview_b64 = self._encode_preview(path)
+                save_logo_path(path)
+                self._logo_img.src_base64 = preview_b64
+                self._logo_img.visible = True
+                self._logo_placeholder_icon.visible = False
+                self._logo_name.value = Path(path).name
+                self._logo_name.visible = True
+                self._remove_logo_btn.visible = True
+                self._set_logo_feedback("Logo guardado correctamente.", success=True)
+        except Exception as ex:
+            self._set_logo_feedback(f"Error al cargar la imagen: {ex}", success=False)
+        finally:
+            self._pick_logo_btn.disabled = False
+            self.page.update()
+
+    def _remove_logo(self, e):
+        save_logo_path("")
+        self._logo_img.src_base64 = ""
+        self._logo_img.visible = False
+        self._logo_placeholder_icon.visible = True
+        self._logo_name.value = ""
+        self._logo_name.visible = False
+        self._remove_logo_btn.visible = False
+        self._set_logo_feedback("Logo eliminado.", success=True)
+        self.page.update()
+
+    def _set_logo_feedback(self, msg: str, *, success: bool):
+        self._logo_feedback.value = msg
+        self._logo_feedback.color = ft.Colors.GREEN_700 if success else ft.Colors.RED_700
+        self._logo_feedback.visible = True
 
     # ── Path handlers ─────────────────────────────────────────────────────────
 
@@ -210,6 +308,33 @@ class ConfigView:
                             self._reset_path_btn,
                         ], spacing=8),
                         self._path_feedback,
+                    ], spacing=10),
+                    padding=16,
+                ), elevation=1),
+
+                # Logo
+                ft.Card(content=ft.Container(
+                    content=ft.Column([
+                        ft.Text("LOGO DEL COMPROBANTE", size=11,
+                                weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_700),
+                        ft.Container(
+                            content=ft.Column([
+                                ft.Row([self._logo_img],
+                                       alignment=ft.MainAxisAlignment.CENTER),
+                                ft.Row([self._logo_placeholder_icon],
+                                       alignment=ft.MainAxisAlignment.CENTER),
+                            ], spacing=0),
+                            padding=10,
+                            border=ft.border.all(1, ft.Colors.BLUE_GREY_100),
+                            border_radius=8,
+                            bgcolor=ft.Colors.GREY_50,
+                        ),
+                        self._logo_name,
+                        ft.Row([
+                            self._pick_logo_btn,
+                            self._remove_logo_btn,
+                        ], spacing=8),
+                        self._logo_feedback,
                     ], spacing=10),
                     padding=16,
                 ), elevation=1),
