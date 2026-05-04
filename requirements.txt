@@ -1,0 +1,7 @@
+flet>=0.28.0
+qrcode[pil]
+Pillow
+opencv-python-headless
+reportlab
+keyring
+pymupdf
