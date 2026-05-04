@@ -1,9 +1,0 @@
-{
-  "nombre": "Mi Tienda",
-  "direccion": "",
-  "telefono": "",
-  "email": "",
-  "prefijo_comprobante": "COMP",
-  "ruta_clientes": "",
-  "generar_pdf": true
-}
